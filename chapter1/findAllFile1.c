@@ -1,10 +1,11 @@
 /***********************
-  列举指定目录下的所有文件
+  列举指定目录下的所有文件:通过stat来判断是否为文件还是目录
   **********************/
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #define MAXSIZE 1024
 
 void showAllFile(char *path);
@@ -25,11 +26,15 @@ void showAllFile(char *path)
 	struct	dirent *dirp;
 	char	dirent[MAXSIZE];
 	char	slash[2] = "/";
-	//说明为一个文件
-	if ((dp = opendir(path)) == NULL){
+	struct	stat	buf;
+	if (lstat(path, &buf) < 0){
+		return;
+	}
+	if (!S_ISDIR(buf.st_mode)){
 		printf("%s\n", path);
 	}
-	else{
+	else {
+		dp = opendir(path);
 		while ((dirp = readdir(dp)) != NULL){
 			if (strcmp(dirp->d_name, ".") == 0 || strcmp(dirp->d_name, "..") == 0){
 				continue;
@@ -37,7 +42,15 @@ void showAllFile(char *path)
 			strcpy(dirent, path);
 			strcpy(dirent + strlen(path), slash);
 			strcpy(dirent + strlen(path) + strlen(slash), dirp->d_name);
-			showAllFile(dirent);
+			if (lstat(dirent, &buf) < 0){
+				continue;
+			}
+			if (!S_ISDIR(buf.st_mode)){
+				printf("%s\n", dirent);
+			}
+			else {
+				showAllFile(dirent);
+			}
 		}
 	}
 }
